@@ -3,9 +3,26 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var bodyParser = require('body-parser');
+
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var authRouter = require('./routes/auth');
+
+var env='local';
+var config = require('./config.json');
+var mysql_main_conf = config.databases[env].mysql;
+var mysql = require('mysql');
+
+var connection = mysql.createConnection({
+  // connectionLimit : connectionLimit,
+  host     : mysql_main_conf.host,
+  user     : mysql_main_conf.user,
+  password : mysql_main_conf.password,
+  database : mysql_main_conf.database,
+  debug    : false
+});
 
 var app = express();
 
@@ -14,13 +31,25 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
 app.use(logger('dev'));
+app.use(function(req, res, next) {
+  req.connection = connection;
+  next();
+})
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }))
+ 
+// parse application/json
+app.use(bodyParser.json())
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/auth', authRouter);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
